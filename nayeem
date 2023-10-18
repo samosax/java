@@ -29,6 +29,77 @@ public class FileReadWriteWithMultiThreads {
 }
 
 
+import java.io.*;
+
+public class DivisibleBy2FileCopy {
+    public static void main(String[] args) {
+        String inputFile = "input.txt";
+        String outputFile = "output.txt";
+
+        Thread readerThread = new Thread(new FileReaderTask(inputFile, outputFile));
+        Thread writerThread = new Thread(new FileWriterTask(outputFile));
+
+        readerThread.start();
+        writerThread.start();
+    }
+}
+
+class FileReaderTask implements Runnable {
+    private String inputFile;
+    private String outputFile;
+
+    public FileReaderTask(String inputFile, String outputFile) {
+        this.inputFile = inputFile;
+        this.outputFile = outputFile;
+    }
+
+    @Override
+    public void run() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                int number = Integer.parseInt(line);
+                if (number % 2 == 0) {
+                    FileWriterTask.addData(outputFile, Integer.toString(number));
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class FileWriterTask implements Runnable {
+    private static final Object lock = new Object();
+    private static String outputFile;
+    private static String dataToWrite;
+
+    public static void addData(String outputFile, String data) {
+        synchronized (lock) {
+            FileWriterTask.outputFile = outputFile;
+            FileWriterTask.dataToWrite = data;
+        }
+    }
+
+    @Override
+    public void run() {
+        synchronized (lock) {
+            try (FileWriter writer = new FileWriter(outputFile, true);
+                 BufferedWriter bufferedWriter = new BufferedWriter(writer)) {
+                if (dataToWrite != null) {
+                    bufferedWriter.write(dataToWrite);
+                    bufferedWriter.newLine();
+                    dataToWrite = null;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+
+
 
 class FileReaderThread implements Runnable {
 
