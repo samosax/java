@@ -1,0 +1,149 @@
+import java.io.*;
+
+
+
+public class FileReadWriteWithMultiThreads {
+
+    public static void main(String[] args) {
+
+        String inputFile = "input.txt";
+
+        String outputFile = "output.txt";
+
+        int bufferSize = 1024;
+
+
+
+        // Create and start two threads for reading and writing
+
+        Thread readerThread = new Thread(new FileReaderThread(inputFile, bufferSize));
+
+        Thread writerThread = new Thread(new FileWriterThread(outputFile, bufferSize));
+
+        readerThread.start();
+
+        writerThread.start();
+
+    }
+
+}
+
+
+
+class FileReaderThread implements Runnable {
+
+    private String inputFile;
+
+    private int bufferSize;
+
+
+
+    public FileReaderThread(String inputFile, int bufferSize) {
+
+        this.inputFile = inputFile;
+
+        this.bufferSize = bufferSize;
+
+    }
+
+
+
+    @Override
+
+    public void run() {
+
+        try (FileInputStream fis = new FileInputStream(inputFile)) {
+
+            byte[] buffer = new byte[bufferSize];
+
+            int bytesRead;
+
+            while ((bytesRead = fis.read(buffer)) != -1) {
+
+                // Pass the read data to the FileWriterThread
+
+                FileWriterThread.addData(buffer, bytesRead);
+
+            }
+
+        } catch (IOException e) {
+
+            e.printStackTrace();
+
+        }
+
+    }
+
+}
+
+
+
+class FileWriterThread implements Runnable {
+
+    private String outputFile;
+
+    private int bufferSize;
+
+    private static final Object lock = new Object();
+
+    private static byte[] dataToWrite;
+
+    private static int bytesRead;
+
+
+
+    public FileWriterThread(String outputFile, int bufferSize) {
+
+        this.outputFile = outputFile;
+
+        this.bufferSize = bufferSize;
+
+    }
+
+
+
+    @Override
+
+    public void run() {
+
+        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+
+            while (true) {
+
+                synchronized (lock) {
+
+                    if (dataToWrite != null) {
+
+                        fos.write(dataToWrite, 0, bytesRead);
+
+                        dataToWrite = null;
+
+                    }
+
+                }
+
+            }
+
+        } catch (IOException e) {
+
+            e.printStackTrace();
+
+        }
+
+    }
+
+
+
+    public static void addData(byte[] data, int length) {
+
+        synchronized (lock) {
+
+            dataToWrite = data;
+
+            bytesRead = length;
+
+        }
+
+    }
+
+}
